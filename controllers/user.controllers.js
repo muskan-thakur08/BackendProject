@@ -189,11 +189,11 @@ const getCurrentUser=asyncHandler(async(req,res)=>{
 const updateAccoutDetails=asyncHandler(async(req,res)=>{
     const {fullName,email}=req.body;
 
-    if (!(fullName||email)) {
+    if (!fullName||!email) {
       throw new ApiError(400,"All field are Required!!")
     }
   
-    const updatedUser=User.findByIdAndUpdate(
+    const updatedUser=await User.findByIdAndUpdate(
       req.user?._id,
       {
         $set:{
@@ -270,22 +270,6 @@ const updateUserCoverImg=asyncHandler(async(req,res)=>{
         new ApiResponse(200,user,"Cover Image Updated Successfully!!")
       )
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export { 
   registerUser,
   loginUser,
