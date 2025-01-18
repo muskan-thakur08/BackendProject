@@ -18,8 +18,4 @@ app.use(cookieParser())
 import userRouter from "./routes/user.routes.js";
 app.use("/api/v1/users",userRouter)
 
-app.get("/",(req, res)=>{
-    res.send("Hello world")
-})
-
 export {app};
