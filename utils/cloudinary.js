@@ -1,6 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary';
 import fs from "fs"
-import ApiError from "../utils/ApiError.js";
+import {ApiError} from "../utils/ApiError.js";
 import {ApiResponse} from "../utils/ApiResponse.js";
 
 cloudinary.config({
@@ -22,20 +22,45 @@ const uploadOnCloudinary=async (filePath)=>{
     }
 }
 
-const deleteFromCloudinary=async(imageURL)=>{
+const deleteFromCloudinary = async (fileUrl, resourceType = "image") => {
     try {
-        const publicId=imageURL.split("/").pop().split(".")[0]
-        if (!publicId) {
-            throw new ApiError(400,"Error while getting image public name")
-        }
-        const result=await cloudinary.uploader.destroy(publicId);
-        if (result.result!=="ok") {
-            throw new ApiError(400,"Error while deleting from cloudinary")
-        }
-        return new ApiResponse(200,{},"Image Deleted Successfully!!")
+      if (
+        !fileUrl ||
+        typeof fileUrl !== "string" ||
+        !fileUrl.includes("cloudinary")
+      ) {
+        throw new ApiError(400, "Invalid file URL provided");
+      }
+  
+      // Extract the public ID from the file URL
+      const segments = fileUrl.split("/");
+      const publicName = segments[segments.length - 1].split(".")[0];
+  
+      if (!publicName) throw new ApiError(400, "Error extracting public ID");
+  
+      // Attempt to delete the file from Cloudinary
+      const result = await cloudinary.uploader.destroy(publicName, {
+        resource_type: resourceType,
+      });
+  
+      if (result.result === "not found") {
+        console.warn(
+          `File with public ID: ${publicName} not found on Cloudinary.`
+        );
+        return { success: false, message: "File not found on Cloudinary" };
+      }
+  
+      if (result.result !== "ok") {
+        throw new ApiError(500, `Cloudinary deletion failed: ${result.result}`);
+      }
+  
+      console.log(
+        `${resourceType} with public ID: ${publicName} deleted successfully.`
+      );
+      return { success: true, message: `${resourceType} deleted successfully` };
     } catch (error) {
-        throw new ApiError(500,"Something went wrong while deleting from cloudinary!!")
+      console.error("Cloudinary deletion error:", error.message);
+      throw new ApiError(500, `Cloudinary deletion error: ${error.message}`);
     }
-}
-
+  };
 export  {uploadOnCloudinary,deleteFromCloudinary};
