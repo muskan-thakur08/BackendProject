@@ -133,7 +133,7 @@ const getVideoById = asyncHandler(async (req, res) => {
   }
   const video = await Video.findById(videoId).populate("owner", "username");
 
-  // another way to get video by id
+  // another way to get video by id 
   // const video= Video.aggregate([
   //   {
   //     $match:{
