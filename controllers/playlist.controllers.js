@@ -12,7 +12,14 @@ const createPlaylist = asyncHandler(async (req, res) => {
   if (!name || !description) {
     throw new ApiError(400, "Name and description are required");
   }
-  const newPlaylist = await Playlist.create({ name, description, owner });
+  const newPlaylist = await Playlist.create({
+    name,
+    description,
+    owner,
+  });
+  if (!newPlaylist.length == 0) {
+    throw new ApiError(400, "Creating playlist failed");
+  }
   return res
     .status(200)
     .json(new ApiResponse(200, newPlaylist, "Playlist created successfully"));
@@ -145,7 +152,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
           },
           {
             $addFields: {
-              $first: "$owner",
+              owner: { $first: "$owner" },
             },
           },
 
@@ -196,18 +203,19 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
   if (!isValidObjectId(playlistId) || !isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid playlistId or videoId");
   }
-  const newPlaylist=await Playlist.findByIdAndUpdate(playlistId,
+  const newPlaylist = await Playlist.findByIdAndUpdate(
+    playlistId,
     {
-      $push:{
-        videos:videoId
-      }
+      $push: {
+        videos: videoId,
+      },
     },
     {
-      new:true
+      new: true,
     }
-  )
-  if(!newPlaylist){
-    throw new ApiError(404,"Failed to add video to playlist")
+  );
+  if (!newPlaylist) {
+    throw new ApiError(404, "Failed to add video to playlist");
   }
   return res
     .status(200)
@@ -220,18 +228,19 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
   if (!isValidObjectId(playlistId) || !isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid playlistId or videoId");
   }
-  const playlist=await Playlist.findByIdAndUpdate(playlistId,
+  const playlist = await Playlist.findByIdAndUpdate(
+    playlistId,
     {
-      $pull:{
-        videos:videoId
-      }
+      $pull: {
+        videos: videoId,
+      },
     },
     {
-      new:true
+      new: true,
     }
-  )
-  if(!playlist){
-    throw new ApiError(404,"Failed to remove video from playlist")
+  );
+  if (!playlist) {
+    throw new ApiError(404, "Failed to remove video from playlist");
   }
   return res
     .status(200)
@@ -265,31 +274,32 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   if (!playlistId) {
     throw new ApiError(404, "Playlist Id is required");
   }
-  if(!name && !description){
-    throw new ApiError(400,"Name and description are required")
-}
-  const updatedPlaylist={}
+  if (!name && !description) {
+    throw new ApiError(400, "Name and description are required");
+  }
+  const updatedPlaylist = {};
   if (name) {
-    updatePlaylist.name=name
+    updatePlaylist.name = name;
   }
   if (description) {
-    updatePlaylist.description=description
+    updatePlaylist.description = description;
   }
-  const newPlaylist=Playlist.findByIdAndUpdate(playlistId,
+  const newPlaylist = Playlist.findByIdAndUpdate(
+    playlistId,
     {
-    $set:updatedPlaylist
-  },
-  {
-    new:true
+      $set: updatedPlaylist,
+    },
+    {
+      new: true,
+    }
+  );
+  if (!newPlaylist) {
+    throw new ApiError(404, "Failed to Update Playlist!");
   }
-)
-if(!newPlaylist){
-  throw new ApiError(404,"Failed to Update Playlist!")
-}
   return res
     .status(200)
     .json(new ApiResponse(200, newPlaylist, "Playlist updated successfully"));
-})
+});
 
 export {
   createPlaylist,

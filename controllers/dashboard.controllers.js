@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 import { Video } from "../models/video.models.js";
+import { Tweet } from "../models/tweet.models.js";
+import { Comment } from "../models/comment.models.js";
 import { Subscription } from "../models/subscription.models.js";
 import { Like } from "../models/like.models.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -8,7 +10,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 const getChannelStats = asyncHandler(async (req, res) => {
   // TODO: Get the channel stats like total video views, total subscribers, total videos, total likes etc.
-  const { channelId } = req.user._id;
+  const  channelId  = req.user._id;
   if (!channelId) {
     throw new ApiError(400, "Channel Id is required");
   }
@@ -223,4 +225,143 @@ const getChannelVideos = asyncHandler(async (req, res) => {
     );
 });
 
-export { getChannelStats, getChannelVideos };
+const getAllTweets = asyncHandler(async (req, res) => {
+  // TODO: Get all the Tweets uploaded by the channel
+  const channelId = req.user?._id;
+  if (!channelId) {
+    throw new ApiError(401, "User not authenticated");
+  }
+  const tweets = await Tweet.aggregate([
+    {
+      $match: {
+        owner: new mongoose.Types.ObjectId(channelId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "ownerDetails",
+        pipeline: [
+          {
+            $project: {
+              fullName: 1,
+              avatar: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        owner: { $first: "$ownerDetails" },
+      },
+    },
+    {
+      $project: {
+        content: 1,
+        createdAt: 1,
+        "ownerDetails.fullName": 1,
+        "ownerDetails.avatar": 1,
+      },
+    },
+  ]);
+
+  const totalTweetCount = await Tweet.countDocuments({
+    owner: new mongoose.Types.ObjectId(channelId),
+  });
+
+  if (!tweets.length) {
+    throw new ApiError(404, "No Tweet in this channel");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { tweets, totalTweetCount },
+        "Tweet fetched successfully"
+      )
+    );
+});
+const getAllComments = asyncHandler(async (req, res) => {
+  // TODO: Get all the Comments in the video uploaded by the channel
+  const channelId = req.user._id;
+  if (!channelId) {
+    throw new ApiError(400, "Channel Id is required");
+  }
+  const videoComment = await Comment.aggregate([
+    {
+      $lookup: {
+        from: "videos",
+        localField: "video",
+        foreignField: "_id",
+        as: "videoDetails",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "ownerDetails",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 1,
+                    fullName: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              owner: { $first: "$ownerDetails" },
+            },
+          },
+          {
+            $project: {
+              title: 1,
+              description: 1,
+              thumbnail: 1,
+              duration: 1,
+              "owner._id": 1,
+              "owner.fullName": 1,
+              "owner.avatar": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $unwind: "$videoDetails",
+    },
+     {
+       $match: {
+         "videoDetails.owner._id": new mongoose.Types.ObjectId(channelId),
+       },
+     },
+    {
+      $project: {
+        content: 1,
+        createdAt: 1,
+        videoDetails: 1,
+      },
+    },
+  ]);
+ 
+  if (!videoComment.length) {
+    throw new ApiError(404, "No comments found for this videos.");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, { videoComment }, "Comments fetched successfully")
+    );
+});
+
+export { getChannelStats, getChannelVideos, getAllTweets, getAllComments };

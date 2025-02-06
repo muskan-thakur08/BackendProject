@@ -44,7 +44,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        $first: "$owner",
+        owner: { $first: "$owner" },
       },
     },
     {
@@ -98,16 +98,16 @@ const updateComment = asyncHandler(async (req, res) => {
   if (typeof content !== "string") {
     throw new ApiError(400, "Content must be a valid string");
   }
-//   const comment = {};
-//   if (content) {
-//     comment.content = content;
-//   }
+  //   const comment = {};
+  //   if (content) {
+  //     comment.content = content;
+  //   }
   const updatedComment = await Comment.findByIdAndUpdate(
     resource._id,
     {
-      $set:{
-        content
-      }
+      $set: {
+        content,
+      },
     },
     {
       new: true,
@@ -123,7 +123,7 @@ const updateComment = asyncHandler(async (req, res) => {
 
 const deleteComment = asyncHandler(async (req, res) => {
   // TODO: delete a comment
-  const resource=req.resource;
+  const resource = req.resource;
   const deletedComment = await Comment.findByIdAndDelete(resource._id);
 
   if (!deletedComment) {
